@@ -1,60 +1,24 @@
 # smart-offload
 
-Aplikacja na iPhone'a, która rozpoznaje obiekty i tekst (OCR) na obrazie z kamery
-i dla każdej klatki sama decyduje, czy policzyć wynik lokalnie, czy wysłać klatkę
-do jednego z MacBooków w tej samej sieci Wi-Fi i odebrać gotowy wynik.
-MacBooki tworzą prywatną "chmurę obliczeniową": każdy uruchamia workera, który
-rozgłasza się przez Bonjour, przyjmuje klatki i odsyła wykryte obiekty lub tekst.
+An iPhone app that recognizes objects and text (OCR) from the camera and, for every frame,
+decides whether to compute locally or send it to a MacBook on the same Wi-Fi network.
+Each MacBook runs a worker that advertises itself via Bonjour and returns the result.
 
-## Co jest liczone
+## Decision
 
-- detekcja obiektów na klatce z kamery (model YOLO przez Core ML),
-- OCR, czyli rozpoznanie tekstu na zdjęciu (Vision).
+The phone compares the estimated cost of both options and picks the cheaper one:
 
-To samo zadanie, ten sam model i ten sam format wyniku po obu stronach,
-dzięki czemu decyzja "gdzie liczyć" nie zmienia tego, co widzi użytkownik,
-tylko czas, zużycie baterii i obciążenie telefonu.
+- local: predicted inference time on the phone + energy penalty when the battery is low,
+- remote: frame transfer time + latency to the worker + inference time on the Mac.
 
-## Na jakiej podstawie podejmowana jest decyzja
+Input signals: battery level and low power mode, network type and bandwidth,
+RTT to each worker, CPU load and thermal state of the phone.
+Every decision is logged together with its inputs and the measured execution time.
 
-Przed każdym zadaniem telefon zbiera cztery sygnały:
+## Building
 
-| sygnał | źródło na iOS | jak wpływa |
-|---|---|---|
-| poziom baterii i tryb oszczędzania | `UIDevice.batteryLevel`, `isLowPowerModeEnabled` | niska bateria przesuwa decyzję w stronę wysyłania |
-| jakość sieci | `NWPathMonitor` (Wi-Fi/komórkowa, metered, przepustowość) | brak Wi-Fi lub słabe łącze wymusza liczenie lokalne |
-| opóźnienie do workera | cykliczny ping do każdego znalezionego MacBooka | wysokie RTT zjada zysk z szybszego sprzętu |
-| obciążenie CPU i stan termiczny | `host_processor_info`, `ProcessInfo.thermalState` | gorący lub zajęty telefon oddaje pracę |
+Requires Xcode 16+ (Swift 6).
 
-Worker w odpowiedzi na ping zgłasza własne obciążenie, więc telefon może też
-wybrać najmniej zajęty MacBook spośród kilku.
-
-Decyzja sprowadza się do porównania szacowanego kosztu obu wariantów:
-
-- **lokalnie**: przewidywany czas inferencji na telefonie (uczony z poprzednich pomiarów)
-  plus kara za energię, rosnąca gdy bateria spada;
-- **zdalnie**: czas przesłania klatki przy zmierzonej przepustowości, RTT,
-  czas inferencji na workerze (z jego ostatnich raportów) plus kara za niepewność sieci.
-
-Wygrywa tańszy wariant. Każda decyzja jest logowana razem z sygnałami wejściowymi
-i rzeczywistym czasem wykonania, co pozwala kalibrować model kosztu i porównać
-go później ze strategiami prostymi (zawsze lokalnie, zawsze zdalnie).
-
-## Z czego się składa
-
-- biblioteka `OffloadCore` w czystym Swifcie: silnik decyzji, protokół wiadomości,
-  pomiary; wspólna dla iOS i macOS, testowana jednostkowo,
-- `offload-worker`: program na macOS rozgłaszający się przez Bonjour i wykonujący zadania,
-- aplikacja iOS z podglądem kamery, wynikami i panelem pokazującym, co zdecydował silnik i dlaczego.
-
-## Budowanie
-
-Wymagany Xcode 16 lub nowszy (Swift 6).
-
-```sh
-swift build                 # biblioteka i worker
-swift test                  # testy silnika decyzji
-swift run offload-worker    # uruchomienie workera na Macu
-```
-
-Aplikację iOS buduje się z Xcode po dodaniu projektu w katalogu `App/`.
+    swift build                 # library and worker
+    swift test                  # decision engine tests
+    swift run offload-worker    # run the worker on a Mac
