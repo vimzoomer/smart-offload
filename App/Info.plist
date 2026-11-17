@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera feed is analyzed to recognize objects and text.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Frames can be sent to a Mac on the same Wi-Fi network for faster recognition.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_smartoffload._tcp</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+</dict>
+</plist>

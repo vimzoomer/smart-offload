@@ -20,5 +20,12 @@ Every decision is logged together with its inputs and the measured execution tim
 Requires Xcode 16+ (Swift 6).
 
     swift build                 # library and worker
-    swift test                  # decision engine tests
+    swift test
     swift run offload-worker    # run the worker on a Mac
+
+The iPhone app lives in `App/SmartOffload.xcodeproj`. Open it in Xcode, pick your team under
+Signing & Capabilities, and run it on a phone connected to the same Wi-Fi network as the worker.
+The app asks for camera and local network access on first launch.
+
+Decisions are appended to `decisions.jsonl` in the app's Documents folder; use the share link
+in the app or the Files app to export it.
